@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -10,6 +11,10 @@ import (
 
 func runGoProg() *exec.Cmd {
 	cmd := exec.Command("go", "run", ".")
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	cmd.Run()
 	return cmd
 }
@@ -25,8 +30,14 @@ func shouldRestart(e fsnotify.Event) bool {
 		e.Has(fsnotify.Rename))
 }
 
-func watchGoProg(watcher *fsnotify.Watcher) {
-	fmt.Println("Starting watching...")
+func watchGoProg(watcher *fsnotify.Watcher, dir string) {
+	// HACK: go run dirname does not work for some reason
+	// the quickest solution now is to chdir to the dir
+	// and run the program from there
+	//TODO: find a better solution!
+	os.Chdir(dir)
+
+	fmt.Printf("Starting watching %s...\n", dir)
 	cmd := runGoProg()
 
 	for {
@@ -55,15 +66,22 @@ func watchGoProg(watcher *fsnotify.Watcher) {
 }
 
 func main() {
+	if len(os.Args) != 2 {
+		fmt.Println("Must specify directory name!")
+		os.Exit(1)
+	}
+
+	dir := os.Args[1]
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
 	}
 	defer watcher.Close()
 
-	go watchGoProg(watcher)
+	go watchGoProg(watcher, dir)
 
-	err = watcher.Add(".")
+	err = watcher.Add(dir)
 	if err != nil {
 		panic(err)
 	}
