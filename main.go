@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -112,12 +113,8 @@ func addFolder(w *fsnotify.Watcher, dir string) error {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("Must specify directory name!")
-		os.Exit(1)
-	}
-
-	dir := os.Args[1]
+	dir := flag.String("dir", ".", "--dir dirname   dirname to watch for changes")
+	flag.Parse()
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -125,9 +122,9 @@ func main() {
 	}
 	defer watcher.Close()
 
-	go watchGoProg(watcher, dir)
+	go watchGoProg(watcher, *dir)
 
-	err = addFolder(watcher, dir)
+	err = addFolder(watcher, *dir)
 	if err != nil {
 		panic(err)
 	}
