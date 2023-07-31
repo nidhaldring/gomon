@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
+	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -34,7 +37,7 @@ func watchGoProg(watcher *fsnotify.Watcher, dir string) {
 	// HACK: go run dirname does not work for some reason
 	// the quickest solution now is to chdir to the dir
 	// and run the program from there
-	//TODO: find a better solution!
+	// TODO: find a better solution!
 	os.Chdir(dir)
 
 	fmt.Printf("Starting watching %s...\n", dir)
@@ -65,6 +68,24 @@ func watchGoProg(watcher *fsnotify.Watcher, dir string) {
 
 }
 
+func addFolder(w *fsnotify.Watcher, dir string) error {
+	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			log.Fatal("error: ", err)
+			return err
+		}
+
+		fmt.Println("path: ", path)
+		if !d.IsDir() || (d.IsDir() && strings.Index(path, ".") == 0) {
+			return nil
+		}
+
+		w.Add(d.Name())
+
+		return nil
+	})
+}
+
 func main() {
 	if len(os.Args) != 2 {
 		fmt.Println("Must specify directory name!")
@@ -81,7 +102,7 @@ func main() {
 
 	go watchGoProg(watcher, dir)
 
-	err = watcher.Add(dir)
+	err = addFolder(watcher, dir)
 	if err != nil {
 		panic(err)
 	}

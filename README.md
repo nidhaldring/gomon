@@ -15,6 +15,6 @@ go build .
 ```
 ./gomon
 ```
-# TODo:
+# TODO:
 [x] Add tests
 [x] Remove fsnotify
