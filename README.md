@@ -16,5 +16,6 @@ go build .
 ./gomon
 ```
 # TODO:
+[x] Detect when gitignore is deleted and add folders to watch list
 [x] Add tests
 [x] Remove fsnotify

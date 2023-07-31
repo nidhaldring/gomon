@@ -50,6 +50,12 @@ func watchGoProg(watcher *fsnotify.Watcher, dir string) {
 				return
 			}
 
+			// if it's a dir event try to add it to the watch list and return
+			if isDir(event.Name) && !ignoreDir(event.Name) {
+				watcher.Add(event.Name)
+				return
+			}
+
 			if shouldRestart(event) {
 				fmt.Println("[Info]: Detected a change: restarting...")
 				cmd.Process.Kill()
@@ -68,6 +74,25 @@ func watchGoProg(watcher *fsnotify.Watcher, dir string) {
 
 }
 
+func ignoreDir(dirname string) bool {
+	// ignore hidden dirs + anything in gitignore
+	return isHiddenDir(dirname) || isInGitIgnore(dirname)
+}
+
+func isDir(path string) bool {
+	file, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	if stat, err := file.Stat(); err != nil {
+		return stat.IsDir()
+	}
+
+	return false
+}
+
 func addFolder(w *fsnotify.Watcher, dir string) error {
 	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -75,8 +100,8 @@ func addFolder(w *fsnotify.Watcher, dir string) error {
 			return err
 		}
 
-		fmt.Println("path: ", path)
-		if !d.IsDir() || (d.IsDir() && strings.Index(path, ".") == 0) {
+		if !d.IsDir() || (d.IsDir() && ignoreDir(path)) {
+			fmt.Printf("this is ignored %s\n", path)
 			return nil
 		}
 
